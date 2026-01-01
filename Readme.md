@@ -6,6 +6,7 @@
 * Seemless Playing video ( React Front End )
 * Auth Layer so different Users will have different Files and monthly bandwidth/quality limit ( For no only me and a Guest for testing )
 * Loading Speed controller + Auto Loadings option based on network speed
+* Different Modes (UDP/TCP) + One automode with autoswitching between protocols
 
 ## Tech Stack
 * FastAPI ( if it can for backend and files packet serving  other wise some new Library in Python )
