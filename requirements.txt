@@ -1,0 +1,8 @@
+fastapi==0.128.0
+SQLAlchemy==2.0.45
+uvicorn==0.40.0
+alembic==1.17.2
+python-jose==3.5.0
+pydantic==2.12.5
+python-dotenv==1.2.1
+ffmpeg-python==0.2.0
