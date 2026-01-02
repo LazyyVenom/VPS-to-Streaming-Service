@@ -60,3 +60,7 @@ Ref: "videos"."id" < "user_usage"."video_id"
 ```
 
 ## Purpose
+
+* Manage Users so Others can test and I can keep watching my personal videos ( I want ).
+* Easy way to organize videos and stuff.
+* Can manage bandwidth for others I will have unlimited.
