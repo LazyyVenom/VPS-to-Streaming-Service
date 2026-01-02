@@ -1,2 +1,4 @@
 env/
 *temp.py
+.env
+.venv/
