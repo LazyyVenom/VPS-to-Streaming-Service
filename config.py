@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
+from sqlalchemy.ext.declarative import declarative_base
 
 
 class Settings(BaseSettings):
