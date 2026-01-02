@@ -1,6 +1,10 @@
 # DB Design For The Project
 
 ## DBDiagram.io Structure
+
+![DB Design](./images/DBDiagram.png)
+
+```dbml
 Table users {
   id uuid [primary key]
   username varchar
@@ -11,6 +15,7 @@ Table users {
 }
 
 Table user_usage {
+  id uuid [primary key]
   user_id uuid
   video_id uuid
   bandwidth_used integer
@@ -35,6 +40,7 @@ Table playlists {
 
 Table playlist_videos_mapping {
   playlist_id uuid
+  position int
   video_id uuid
   created_at timestamp
 }
@@ -51,3 +57,6 @@ Ref: "playlists"."id" < "playlist_videos_mapping"."playlist_id"
 Ref: "users"."id" < "user_usage"."user_id"
 
 Ref: "videos"."id" < "user_usage"."video_id"
+```
+
+## Purpose
