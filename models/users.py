@@ -19,7 +19,7 @@ class UserUsage(Base):
     __tablename__ = "user_usage"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String(36), ForeignKey("users.id"))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     video_id = Column(String(36), ForeignKey("videos.id"))
-    bandwidth_used = Column(Integer)
+    bandwidth_used = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
