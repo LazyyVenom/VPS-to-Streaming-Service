@@ -11,7 +11,6 @@ from fastapi.security import OAuth2PasswordBearer
 route = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-
 @route.post("/register", response_model=UserResponse)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     """

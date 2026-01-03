@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import auth
+from routers import auth, videos
 from db import engine, Base
 from models.users import User, UserUsage
 from models.videos import Video, Playlist, PlaylistVideoMapping
@@ -14,3 +14,4 @@ app = FastAPI(
 )
 
 app.include_router(auth.route)
+app.include_router(videos.route)

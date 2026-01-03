@@ -1,11 +1,13 @@
 #utils/auth.py
 from models.users import User
 from schemas.users import UserResponse
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 from config import setting
+from db import get_db
 from datetime import datetime, timedelta
 from typing import Union, Any, Optional
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 
 def create_access_token(subject: Union[str, Any], expires_delta: int = None) -> str:
@@ -61,4 +63,33 @@ class JWTBearer(HTTPBearer):
         except jwt.JWTError:
             return False
 
-#jwt_bearer = JWTBearer()
+jwt_bearer = JWTBearer()
+
+def get_current_user(
+    token: str = Depends(jwt_bearer),
+    db: Session = Depends(get_db)
+) -> User:
+    try:
+        payload = jwt.decode(token, setting.secret_key, algorithms=[setting.algorithm])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user
