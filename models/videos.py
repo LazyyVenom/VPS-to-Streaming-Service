@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String,DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String,DateTime, ForeignKey, func, UniqueConstraint
 from enum import Enum
 from sqlalchemy import Enum as SAEnum
 import uuid
@@ -10,6 +10,7 @@ class VideoStatus(Enum):
   UPLOADING = 'UPLOADING'
   PROCESSING = 'PROCESSING'
   PROCESSED = 'PROCESSED'
+  FAILED = 'FAILED'
 
 class Video(Base):
     __tablename__ = "videos" 
@@ -17,9 +18,14 @@ class Video(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, nullable=False)
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    url = Column(String, nullable=False)
+    storage_path = Column(String, nullable=False)
+    thumbnail_url = Column(String)
     status = Column(SAEnum(VideoStatus, native_enum=False), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    duration_seconds = Column(Integer)
+    width = Column(Integer)
+    height = Column(Integer)
+    size_bytes = Column(Integer)
 
 class Playlist(Base):
     __tablename__ = "playlists" 
@@ -42,3 +48,7 @@ class PlaylistVideoMapping(Base):
         primary_key=True
     )
     position = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("playlist_id", "position", name="uq_playlist_position"),
+    )

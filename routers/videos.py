@@ -30,6 +30,7 @@ def create_video(
         title=payload.title,
         owner_id=payload.owner_id,
         url=payload.url,
+        thumbnail_url=payload.thumbnail_url,
         status=payload.status
     )
     

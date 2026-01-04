@@ -8,12 +8,14 @@ class VideoCreate(BaseModel):
     title: str
     owner_id: str
     url: str
+    thumbnail_url: Optional[str] = None
     status: VideoStatus
 
 
 class VideoUpdate(BaseModel):
     title: Optional[str] = None
     url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     status: Optional[VideoStatus] = None
 
 
@@ -22,6 +24,7 @@ class VideoResponse(BaseModel):
     title: str
     owner_id: str
     url: str
+    thumbnail_url: Optional[str]
     status: VideoStatus
     created_at: datetime
 

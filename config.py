@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     timeout: int
     ACCESS_TOKEN_EXPIRE_MINUTES : int
     REFRESH_TOKEN_EXPIRE_MINUTES : int
+    base_storage_url : str
 
     class Config:
         env_file = Path(Path(__file__).resolve().parent) / ".env"
