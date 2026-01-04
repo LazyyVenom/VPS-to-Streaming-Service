@@ -14,6 +14,8 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class UserShortResponse(BaseModel):
+    username: str
 
 class UserResponse(BaseModel):
     id: str

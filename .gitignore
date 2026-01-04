@@ -5,3 +5,4 @@ env/
 __pycache__/
 *.db
 .DS_Store
+base_users_creator.py

@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from db import get_db
-from schemas.users import UserLogin, UserCreate, UserResponse
+from schemas.users import UserLogin, UserCreate, UserResponse, UserShortResponse
 from models.users import User
 from utils.pswds import secure_pwd, verify_pwd
-from utils.auth import create_access_token, create_refresh_token
+from utils.auth import create_access_token, create_refresh_token, get_current_user
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordBearer
+from typing import List
 
 route = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
@@ -74,5 +75,23 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
         'access_token': access_token,
         'token_type': 'bearer',
         'refresh_token': refresh_token,
-        'user_id': user.id
     }
+
+
+@route.get("/users", response_model=List[UserShortResponse])
+def get_users(
+    db: Session = Depends(get_db),
+):
+    """
+    Get all users. Requires authentication.
+    """
+    users = db.query(User).all()
+    return users
+
+
+@route.get("/users/me", response_model=UserResponse)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """
+    Get current authenticated user's information.
+    """
+    return current_user
