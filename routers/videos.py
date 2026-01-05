@@ -3,43 +3,21 @@ from sqlalchemy.orm import Session
 from db import get_db
 from models.users import User
 from models.videos import Video, VideoStatus
-from schemas.videos import VideoCreate, VideoResponse
+from schemas.videos import VideoResponse
 from utils.auth import get_current_user
 from typing import List
 
 route = APIRouter(prefix="/videos", tags=["Videos"])
 
-
-@route.post("/", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
-def create_video(
-    payload: VideoCreate,
-    db: Session = Depends(get_db),
+@route.post("/", response_model=dict)
+def add_torrent(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create a new video. Requires authentication.
+    Will get link and use it for playlist making / Video editing
     """
-    # Ensure the owner_id matches the authenticated user
-    if payload.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only create videos for yourself"
-        )
+    creator_username = current_user.username
     
-    new_video = Video(
-        title=payload.title,
-        owner_id=payload.owner_id,
-        url=payload.url,
-        thumbnail_url=payload.thumbnail_url,
-        status=payload.status
-    )
-    
-    db.add(new_video)
-    db.commit()
-    db.refresh(new_video)
-    
-    return new_video
-
 
 @route.get("/", response_model=List[VideoResponse])
 def get_videos(
