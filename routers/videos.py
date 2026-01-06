@@ -7,6 +7,7 @@ from schemas.videos import VideoResponse, TorrentRequest
 from utils.auth import get_current_user
 from typing import List
 from index import torrent_queue
+from config import setting
 
 route = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -42,6 +43,13 @@ def get_videos(
     Get all videos for the authenticated user.
     """
     videos = db.query(Video).filter(Video.owner_id == current_user.id).all()
+    
+    # Prepend base_storage_url to relative paths
+    for video in videos:
+        video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+        if video.thumbnail_url:
+            video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+    
     return videos
 
 
@@ -67,5 +75,10 @@ def get_video(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this video"
         )
+    
+    # Prepend base_storage_url to relative paths
+    video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+    if video.thumbnail_url:
+        video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
     
     return video

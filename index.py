@@ -6,8 +6,8 @@ from utils.downloads_processor import DownloadedVideoProcessor
 from config import setting
 from utils.torrent_processor import download_and_process_torrent
 
-downloader = TorrentVideosDownloader(setting.tmp_downloading_url)
-downloads_processor = DownloadedVideoProcessor(setting.base_storage_url, setting.tmp_downloading_url)
+downloader = TorrentVideosDownloader(setting.tmp_downloading_path)
+downloads_processor = DownloadedVideoProcessor(setting.base_storage_path, setting.tmp_downloading_path)
 
 # Queue for torrent processing
 torrent_queue = Queue()

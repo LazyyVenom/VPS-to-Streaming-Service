@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from models.videos import VideoStatus
 
@@ -28,10 +28,14 @@ class VideoResponse(BaseModel):
     id: str
     title: str
     owner_id: str
-    url: str
+    storage_path: str
     thumbnail_url: Optional[str]
     status: VideoStatus
     created_at: datetime
+    duration_seconds: Optional[int] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    size_bytes: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -47,6 +51,17 @@ class PlaylistResponse(BaseModel):
     title: str
     owner_id: str
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PlaylistWithVideosResponse(BaseModel):
+    id: str
+    title: str
+    owner_id: str
+    created_at: datetime
+    videos: List['VideoResponse'] = []
 
     class Config:
         from_attributes = True

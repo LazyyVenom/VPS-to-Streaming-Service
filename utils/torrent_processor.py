@@ -20,8 +20,8 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
         owner_id: The user ID who owns these videos
         torrent_name: Optional name for the torrent (used as folder name)
     """
-    downloader = TorrentVideosDownloader(setting.tmp_downloading_url)
-    processor = DownloadedVideoProcessor(setting.base_storage_url, setting.tmp_downloading_url)
+    downloader = TorrentVideosDownloader(setting.tmp_downloading_path)
+    processor = DownloadedVideoProcessor(setting.base_storage_path, setting.tmp_downloading_path)
     db = SessionLocal()
     
     try:
@@ -31,51 +31,45 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
         
         folder_name = torrent_name or f"torrent_{uuid.uuid4().hex[:8]}"
         
-        video_records = []
-        temp_video = Video(
-            title=torrent_info['name'],
-            owner_id=owner_id,
-            storage_path=folder_name,
-            status=VideoStatus.DOWNLOADING
-        )
-        db.add(temp_video)
-        db.commit()
-        video_records.append(temp_video)
-        logger.info(f"Created video record with ID: {temp_video.id}, Status: DOWNLOADING")
+        # Identify all video files from torrent metadata
+        VIDEO_EXTENSIONS = {
+            ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv",
+            ".webm", ".mpeg", ".mpg", ".m4v", ".3gp",
+            ".3g2", ".ts", ".vob", ".ogv"
+        }
         
-        logger.info("Downloading torrent...")
-        download_path = downloader.download(magnet_link, folder_name)
-        logger.info(f"Download completed: {download_path}")
+        video_files = []
+        for file_info in torrent_info['files']:
+            file_path = file_info['path']
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in VIDEO_EXTENSIONS:
+                video_files.append(file_path)
         
-        logger.info("Finding videos...")
-        downloaded_vids = processor.find_all_videos(folder_name)
-        logger.info(f"Found {len(downloaded_vids)} video(s)")
+        logger.info(f"Identified {len(video_files)} video file(s) in torrent")
         
-        if not downloaded_vids:
-            temp_video.status = VideoStatus.FAILED
-            db.commit()
-            logger.warning("No videos found in torrent. Marked as FAILED.")
+        if not video_files:
+            logger.warning("No video files found in torrent metadata. Skipping download.")
             return
         
-        if len(downloaded_vids) > 1:
-            db.delete(temp_video)
-            video_records = []
-            
-            for vid_path in downloaded_vids:
-                video_name = os.path.basename(vid_path)
-                video_record = Video(
-                    title=video_name,
-                    owner_id=owner_id,
-                    storage_path=folder_name,
-                    status=VideoStatus.DOWNLOADING
-                )
-                db.add(video_record)
-                video_records.append(video_record)
-            db.commit()
-            logger.info(f"Created {len(video_records)} video records")
+        # Create video records for each identified video file BEFORE downloading
+        video_records = []
+        for video_file in video_files:
+            video_name = os.path.basename(video_file)
+            video_record = Video(
+                title=video_name,
+                owner_id=owner_id,
+                storage_path=folder_name,
+                status=VideoStatus.DOWNLOADING
+            )
+            db.add(video_record)
+            video_records.append(video_record)
         
+        db.commit()
+        logger.info(f"Created {len(video_records)} video record(s) with DOWNLOADING status")
+        
+        # Create a playlist if multiple videos
         playlist = None
-        if len(downloaded_vids) > 1:
+        if len(video_files) > 1:
             playlist = Playlist(
                 title=torrent_info['name'],
                 owner_id=owner_id
@@ -84,17 +78,47 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
             db.commit()
             logger.info(f"Created playlist: {playlist.title} (ID: {playlist.id})")
         
+        logger.info("Downloading torrent...")
+        download_path = downloader.download(magnet_link, folder_name)
+        logger.info(f"Download completed: {download_path}")
+        
+        logger.info("Finding downloaded videos...")
+        downloaded_vids = processor.find_all_videos(folder_name)
+        logger.info(f"Found {len(downloaded_vids)} downloaded video(s)")
+        
+        logger.info(f"Found {len(downloaded_vids)} downloaded video(s)")
+        
+        if not downloaded_vids:
+            # No videos found after download, mark all as failed
+            for video_record in video_records:
+                video_record.status = VideoStatus.FAILED
+            db.commit()
+            logger.warning("No videos found after download. Marked all as FAILED.")
+            return
+        
+        # Match downloaded videos with database records by filename
+        downloaded_video_map = {os.path.basename(vid_path): vid_path for vid_path in downloaded_vids}
+        
         logger.info("Processing videos...")
-        for idx, (vid_path, video_record) in enumerate(zip(downloaded_vids, video_records)):
+        for idx, video_record in enumerate(video_records):
             try:
-                logger.info(f"[{idx+1}/{len(downloaded_vids)}] Processing: {os.path.basename(vid_path)}")
+                video_filename = video_record.title
+                
+                if video_filename not in downloaded_video_map:
+                    logger.warning(f"Video file not found for: {video_filename}")
+                    video_record.status = VideoStatus.FAILED
+                    db.commit()
+                    continue
+                
+                vid_path = downloaded_video_map[video_filename]
+                logger.info(f"[{idx+1}/{len(video_records)}] Processing: {video_filename}")
                 
                 video_record.status = VideoStatus.PROCESSING
                 db.commit()
                 
                 # Create storage path: users/{user_id}/videos/{video_id}
                 output_dir = os.path.join(
-                    setting.base_storage_url, 
+                    setting.base_storage_path, 
                     "users", 
                     owner_id, 
                     "videos", 
@@ -102,7 +126,7 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
                 )
                 result = processor.process_video(vid_path, output_dir)
                 
-                # Store relative path from base_storage_url
+                # Store relative path from base_storage_path
                 video_record.storage_path = f"users/{owner_id}/videos/{video_record.id}"
                 video_record.duration_seconds = int(result['duration'])
                 video_record.width = result['width']

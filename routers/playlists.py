@@ -3,9 +3,11 @@ from sqlalchemy.orm import Session
 from db import get_db
 from models.users import User
 from models.videos import Playlist, PlaylistVideoMapping, Video
-from schemas.videos import PlaylistCreate, PlaylistResponse, PlaylistVideoMappingCreate, PlaylistVideoMappingResponse
+from schemas.videos import (PlaylistCreate, PlaylistResponse, PlaylistVideoMappingCreate, 
+                            PlaylistVideoMappingResponse, PlaylistWithVideosResponse, VideoResponse)
 from utils.auth import get_current_user
 from typing import List
+from config import setting
 
 route = APIRouter(prefix="/playlists", tags=["Playlists"])
 
@@ -38,26 +40,52 @@ def create_playlist(
     return new_playlist
 
 
-@route.get("/", response_model=List[PlaylistResponse])
+@route.get("/", response_model=List[PlaylistWithVideosResponse])
 def get_playlists(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get all playlists for the authenticated user.
+    Get all playlists for the authenticated user with their videos.
     """
     playlists = db.query(Playlist).filter(Playlist.owner_id == current_user.id).all()
-    return playlists
+    
+    result = []
+    for playlist in playlists:
+        # Get all videos in this playlist
+        mappings = db.query(PlaylistVideoMapping).filter(
+            PlaylistVideoMapping.playlist_id == playlist.id
+        ).order_by(PlaylistVideoMapping.position).all()
+        
+        videos = []
+        for mapping in mappings:
+            video = db.query(Video).filter(Video.id == mapping.video_id).first()
+            if video:
+                # Prepend base_storage_url to relative paths
+                video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+                if video.thumbnail_url:
+                    video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+                videos.append(video)
+        
+        result.append({
+            "id": playlist.id,
+            "title": playlist.title,
+            "owner_id": playlist.owner_id,
+            "created_at": playlist.created_at,
+            "videos": videos
+        })
+    
+    return result
 
 
-@route.get("/{playlist_id}", response_model=PlaylistResponse)
+@route.get("/{playlist_id}", response_model=PlaylistWithVideosResponse)
 def get_playlist(
     playlist_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get a specific playlist by ID. Only the owner can access it.
+    Get a specific playlist by ID with its videos. Only the owner can access it.
     """
     playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
     
@@ -73,7 +101,28 @@ def get_playlist(
             detail="You don't have permission to access this playlist"
         )
     
-    return playlist
+    # Get all videos in this playlist
+    mappings = db.query(PlaylistVideoMapping).filter(
+        PlaylistVideoMapping.playlist_id == playlist_id
+    ).order_by(PlaylistVideoMapping.position).all()
+    
+    videos = []
+    for mapping in mappings:
+        video = db.query(Video).filter(Video.id == mapping.video_id).first()
+        if video:
+            # Prepend base_storage_url to relative paths
+            video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+            if video.thumbnail_url:
+                video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+            videos.append(video)
+    
+    return {
+        "id": playlist.id,
+        "title": playlist.title,
+        "owner_id": playlist.owner_id,
+        "created_at": playlist.created_at,
+        "videos": videos
+    }
 
 
 @route.post("/{playlist_id}/videos", response_model=PlaylistVideoMappingResponse, status_code=status.HTTP_201_CREATED)
