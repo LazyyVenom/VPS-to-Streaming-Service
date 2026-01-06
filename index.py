@@ -1,0 +1,6 @@
+from utils.downloader import TorrentVideosDownloader
+from utils.downloads_processor import DownloadedVideoProcessor
+from config import Settings
+
+downloader = TorrentVideosDownloader(Settings.tmp_downloading_url)
+downloads_processor = DownloadedVideoProcessor(Settings.base_storage_url)
