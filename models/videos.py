@@ -7,7 +7,7 @@ import uuid
 from db import Base
 
 class VideoStatus(Enum):
-  UPLOADING = 'UPLOADING'
+  DOWNLOADING = 'DOWNLOADING'
   PROCESSING = 'PROCESSING'
   PROCESSED = 'PROCESSED'
   FAILED = 'FAILED'

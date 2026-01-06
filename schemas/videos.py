@@ -4,6 +4,11 @@ from datetime import datetime
 from models.videos import VideoStatus
 
 
+class TorrentRequest(BaseModel):
+    magnet_link: str
+    torrent_name: Optional[str] = None
+
+
 class VideoCreate(BaseModel):
     title: str
     owner_id: str

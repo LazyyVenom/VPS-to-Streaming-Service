@@ -3,20 +3,34 @@ from sqlalchemy.orm import Session
 from db import get_db
 from models.users import User
 from models.videos import Video, VideoStatus
-from schemas.videos import VideoResponse
+from schemas.videos import VideoResponse, TorrentRequest
 from utils.auth import get_current_user
 from typing import List
+from index import torrent_queue
 
 route = APIRouter(prefix="/videos", tags=["Videos"])
 
 @route.post("/", response_model=dict)
 def add_torrent(
+    request: TorrentRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Will get link and use it for playlist making / Video editing
+    Add a torrent to the processing queue. Videos will be downloaded and processed in the background.
     """
-    creator_username = current_user.username
+    task = {
+        'magnet_link': request.magnet_link,
+        'owner_id': current_user.id,
+        'torrent_name': request.torrent_name
+    }
+    
+    torrent_queue.put(task)
+    
+    return {
+        'status': 'queued',
+        'message': 'Torrent added to processing queue',
+        'queue_size': torrent_queue.qsize()
+    }
     
 
 @route.get("/", response_model=List[VideoResponse])

@@ -1,9 +1,9 @@
 import os
 import ffmpeg
 
-
 class DownloadedVideoProcessor:
-    def __init__(self, base_storage_path):
+    def __init__(self, base_storage_path, tmp_downloaded_path):
+        self.tmp_downloaded_path = tmp_downloaded_path
         self.base_storage_path = base_storage_path
         self.presets = {
             "360p": (640, 360, 800_000),
@@ -18,7 +18,7 @@ class DownloadedVideoProcessor:
             ".3g2", ".ts", ".vob", ".ogv"
         }
 
-        base_path = os.path.join(self.base_storage_path, folder_path)
+        base_path = os.path.join(self.tmp_downloaded_path, folder_path)
 
         if not os.path.isdir(base_path):
             return []
