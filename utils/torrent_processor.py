@@ -92,15 +92,23 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
                 video_record.status = VideoStatus.PROCESSING
                 db.commit()
                 
-                output_dir = os.path.join(setting.base_storage_url, video_record.id)
+                # Create storage path: users/{user_id}/videos/{video_id}
+                output_dir = os.path.join(
+                    setting.base_storage_url, 
+                    "users", 
+                    owner_id, 
+                    "videos", 
+                    video_record.id
+                )
                 result = processor.process_video(vid_path, output_dir)
                 
-                video_record.storage_path = video_record.id
+                # Store relative path from base_storage_url
+                video_record.storage_path = f"users/{owner_id}/videos/{video_record.id}"
                 video_record.duration_seconds = int(result['duration'])
                 video_record.width = result['width']
                 video_record.height = result['height']
                 video_record.size_bytes = result['size_bytes']
-                video_record.thumbnail_url = f"{video_record.id}/thumbnail.jpg"
+                video_record.thumbnail_url = f"users/{owner_id}/videos/{video_record.id}/thumbnail.jpg"
                 video_record.status = VideoStatus.PROCESSED
                 db.commit()
                 
