@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES : int
     REFRESH_TOKEN_EXPIRE_MINUTES : int
     base_storage_url : str
+    tmp_downloading_url : str
 
     class Config:
         env_file = Path(Path(__file__).resolve().parent) / ".env"
