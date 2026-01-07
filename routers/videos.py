@@ -21,6 +21,10 @@ def add_torrent(
     """
     Add a torrent to the processing queue. Videos will be downloaded and processed in the background.
     """
+    # I know shouldn't Have done this but I am lazy and no way of creating new user only through DB will change this later if I will feel like it
+    if "guest" in current_user.username.lower():
+        return Response({"body":"Sorry Can't Allow That You will fill my server"}, status_code=400)
+
     task = {
         'magnet_link': request.magnet_link,
         'owner_id': current_user.id,
