@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     base_storage_path : str
     tmp_downloading_path : str
     base_storage_url : str
-
+    api_base_url : str
     class Config:
         env_file = Path(Path(__file__).resolve().parent) / ".env"
         print(f'environment created - {Path(Path(__file__).resolve().name)}')

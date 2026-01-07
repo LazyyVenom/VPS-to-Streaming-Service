@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from db import get_db
 from models.users import User
@@ -34,26 +34,29 @@ def add_torrent(
         'message': 'Torrent added to processing queue',
         'queue_size': torrent_queue.qsize()
     }
-    
 
 @route.get("/", response_model=List[VideoResponse])
 def get_videos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Get all videos for the authenticated user.
-    """
-    videos = db.query(Video).filter(Video.owner_id == current_user.id).all()
-    
-    # Prepend base_storage_url to relative paths
-    for video in videos:
-        video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
-        if video.thumbnail_url:
-            video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
-    
-    return videos
+    videos = (
+        db.query(Video)
+        .filter(Video.owner_id == current_user.id)
+        .all()
+    )
 
+    for video in videos:
+        video.storage_path = (
+            f"{setting.api_base_url}/videos/{video.id}/play"
+        )
+
+        if video.thumbnail_url:
+            video.thumbnail_url = (
+                f"{setting.api_base_url}/videos/{video.id}/thumbnail"
+            )
+
+    return videos
 
 @route.get("/{video_id}", response_model=VideoResponse)
 def get_video(
@@ -61,30 +64,30 @@ def get_video(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Get a specific video by ID. Only the owner can access it.
-    """
     video = db.query(Video).filter(Video.id == video_id).first()
-    
+
     if not video:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Video not found"
         )
-    
+
     if video.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this video"
         )
-    
-    # Prepend base_storage_url to relative paths
-    video.storage_path = f"{setting.base_storage_url}/{video.storage_path}/master.m3u8"
-    if video.thumbnail_url:
-        video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
-    
-    return video
 
+    video.storage_path = (
+        f"{setting.api_base_url}/videos/{video.id}/play"
+    )
+
+    if video.thumbnail_url:
+        video.thumbnail_url = (
+            f"{setting.api_base_url}/videos/{video.id}/thumbnail"
+        )
+
+    return video
 
 @route.patch("/{video_id}", response_model=VideoResponse)
 def update_video(
@@ -167,3 +170,44 @@ def delete_video(
     db.commit()
     
     return None
+
+
+# FILE PROTECTION USER WISE FILES ACCESS
+@route.get("/{video_id}/play")
+def play_video(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    video = db.query(Video).filter(Video.id == video_id).first()
+
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if video.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return Response(
+        headers={
+            "X-Accel-Redirect": f"/_protected_hls/{video.storage_path}/master.m3u8",
+            "Content-Type": "application/vnd.apple.mpegurl",
+        }
+    )
+
+@route.get("/{video_id}/thumbnail")
+def get_thumbnail(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    video = db.query(Video).filter(Video.id == video_id).first()
+
+    if not video or video.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return Response(
+        headers={
+            "X-Accel-Redirect": f"/_protected_hls/{video.storage_path}/thumbnail.jpg",
+            "Content-Type": "image/jpeg",
+        }
+    )
