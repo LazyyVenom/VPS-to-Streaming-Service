@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import shutil
 from utils.downloader import TorrentVideosDownloader
 from utils.downloads_processor import DownloadedVideoProcessor
 from models.videos import Video, VideoStatus, Playlist, PlaylistVideoMapping
@@ -138,6 +139,14 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
                 
                 logger.info(f"Video processed: {result['width']}x{result['height']}, Variants: {', '.join(result['variants'])}")
                 
+                # Delete the original video file to save space
+                try:
+                    if os.path.exists(vid_path):
+                        os.remove(vid_path)
+                        logger.info(f"Deleted original video file: {video_filename}")
+                except OSError as e:
+                    logger.warning(f"Failed to delete video file {video_filename}: {str(e)}")
+                
                 if playlist:
                     mapping = PlaylistVideoMapping(
                         playlist_id=playlist.id,
@@ -158,6 +167,15 @@ def download_and_process_torrent(magnet_link: str, owner_id: str, torrent_name: 
         logger.info(f"Summary - Total: {len(video_records)}, Successful: {successful}, Failed: {failed}")
         if playlist:
             logger.info(f"Playlist created: {playlist.title}")
+        
+        # Clean up the download folder
+        download_folder = os.path.join(setting.tmp_downloading_path, folder_name)
+        if os.path.exists(download_folder):
+            try:
+                shutil.rmtree(download_folder)
+                logger.info(f"Cleaned up download folder: {folder_name}")
+            except Exception as e:
+                logger.warning(f"Failed to delete download folder: {str(e)}")
         
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")

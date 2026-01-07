@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from db import get_db
 from models.users import User
-from models.videos import Video, VideoStatus
-from schemas.videos import VideoResponse, TorrentRequest
+from models.videos import Video, VideoStatus, PlaylistVideoMapping
+from schemas.videos import VideoResponse, TorrentRequest, VideoUpdate
 from utils.auth import get_current_user
 from typing import List
 from index import torrent_queue
 from config import setting
+import os
+import shutil
 
 route = APIRouter(prefix="/videos", tags=["Videos"])
 
@@ -77,8 +79,91 @@ def get_video(
         )
     
     # Prepend base_storage_url to relative paths
+    video.storage_path = f"{setting.base_storage_url}/{video.storage_path}/master.m3u8"
+    if video.thumbnail_url:
+        video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+    
+    return video
+
+
+@route.patch("/{video_id}", response_model=VideoResponse)
+def update_video(
+    video_id: str,
+    payload: VideoUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update video details (currently supports title update). Only the owner can update.
+    """
+    video = db.query(Video).filter(Video.id == video_id).first()
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video not found"
+        )
+    
+    if video.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this video"
+        )
+    
+    # Update only provided fields
+    if payload.title is not None:
+        video.title = payload.title
+    
+    db.commit()
+    db.refresh(video)
+    
+    # Prepend base_storage_url to relative paths
     video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
     if video.thumbnail_url:
         video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
     
     return video
+
+
+@route.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_video(
+    video_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a video, its HLS data, and all playlist associations. Only the owner can delete.
+    """
+    video = db.query(Video).filter(Video.id == video_id).first()
+    
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video not found"
+        )
+    
+    if video.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this video"
+        )
+    
+    # Delete HLS data from storage
+    video_storage_path = os.path.join(setting.base_storage_url, video.storage_path)
+    if os.path.exists(video_storage_path):
+        try:
+            shutil.rmtree(video_storage_path)
+        except Exception as e:
+            # Log but don't fail if file deletion fails
+            pass
+    
+    # Delete playlist mappings
+    db.query(PlaylistVideoMapping).filter(
+        PlaylistVideoMapping.video_id == video_id
+    ).delete()
+    
+    # Delete video record
+    db.delete(video)
+    db.commit()
+    
+    return None

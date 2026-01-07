@@ -39,12 +39,12 @@ class PlaylistVideoMapping(Base):
     __tablename__ = "playlists_videos_mappings"
     playlist_id = Column(
         String(36),
-        ForeignKey("playlists.id"),
+        ForeignKey("playlists.id", ondelete="CASCADE"),
         primary_key=True
     )
     video_id = Column(
         String(36),
-        ForeignKey("videos.id"),
+        ForeignKey("videos.id", ondelete="CASCADE"),
         primary_key=True
     )
     position = Column(Integer, nullable=False)

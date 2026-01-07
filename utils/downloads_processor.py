@@ -8,7 +8,7 @@ class DownloadedVideoProcessor:
         self.presets = {
             "360p": (640, 360, 800_000),
             "720p": (1280, 720, 2_500_000),
-            "1080p": (1920, 1080, 5_000_000),
+            # "1080p": (1920, 1080, 5_000_000),
         }
 
     def find_all_videos(self, folder_path):
@@ -99,12 +99,12 @@ class DownloadedVideoProcessor:
         with open(master_path, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
-    def generate_thumbnail(self, input_path, output_dir):
+    def generate_thumbnail(self, input_path, output_dir, duration):
         os.makedirs(output_dir, exist_ok=True)
-
+        seek_time = min(max(duration * 0.3, 5), duration - 2)
         (
             ffmpeg
-            .input(input_path, ss=1)
+            .input(input_path, ss=seek_time)
             .output(
                 os.path.join(output_dir, "thumbnail.jpg"),
                 vframes=1,
@@ -120,7 +120,7 @@ class DownloadedVideoProcessor:
 
         self.generate_hls(input_path, output_dir, variants)
         self.generate_adaptive_master_streamer(output_dir, variants)
-        self.generate_thumbnail(input_path, output_dir)
+        self.generate_thumbnail(input_path, output_dir, meta["duration"])
 
         return {
             "variants": variants,
