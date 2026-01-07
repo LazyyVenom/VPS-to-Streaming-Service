@@ -119,12 +119,6 @@ def update_video(
     
     db.commit()
     db.refresh(video)
-    
-    # Prepend base_storage_url to relative paths
-    video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
-    if video.thumbnail_url:
-        video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
-    
     return video
 
 
@@ -152,7 +146,7 @@ def delete_video(
         )
     
     # Delete HLS data from storage
-    video_storage_path = os.path.join(setting.base_storage_url, video.storage_path)
+    video_storage_path = os.path.join(setting.base_storage_path, video.storage_path)
     if os.path.exists(video_storage_path):
         try:
             shutil.rmtree(video_storage_path)

@@ -61,10 +61,10 @@ def get_playlists(
         for mapping in mappings:
             video = db.query(Video).filter(Video.id == mapping.video_id).first()
             if video:
-                # Prepend base_storage_url to relative paths
-                video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+                # Use protected routes via API
+                video.storage_path = f"{setting.api_base_url}/videos/{video.id}/play"
                 if video.thumbnail_url:
-                    video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+                    video.thumbnail_url = f"{setting.api_base_url}/videos/{video.id}/thumbnail"
                 videos.append(video)
         
         result.append({
@@ -110,10 +110,10 @@ def get_playlist(
     for mapping in mappings:
         video = db.query(Video).filter(Video.id == mapping.video_id).first()
         if video:
-            # Prepend base_storage_url to relative paths
-            video.storage_path = f"{setting.base_storage_url}/{video.storage_path}"
+            # Use protected routes via API
+            video.storage_path = f"{setting.api_base_url}/videos/{video.id}/play"
             if video.thumbnail_url:
-                video.thumbnail_url = f"{setting.base_storage_url}/{video.thumbnail_url}"
+                video.thumbnail_url = f"{setting.api_base_url}/videos/{video.id}/thumbnail"
             videos.append(video)
     
     return {
