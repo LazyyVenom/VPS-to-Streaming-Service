@@ -167,9 +167,10 @@ def delete_video(
 
 
 # FILE PROTECTION USER WISE FILES ACCESS
-@route.get("/{video_id}/play")
+@route.get("/{video_id}/play/{file_path:path}")
 def play_video(
     video_id: str,
+    file_path: str = "",  # Default to empty for master.m3u8
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -181,10 +182,22 @@ def play_video(
     if video.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
+    # Default to master.m3u8 if no path specified
+    if not file_path:
+        file_path = "master.m3u8"
+    
+    # Determine content type
+    if file_path.endswith('.m3u8'):
+        content_type = "application/vnd.apple.mpegurl"
+    elif file_path.endswith('.ts'):
+        content_type = "video/mp2t"
+    else:
+        content_type = "application/octet-stream"
+
     return Response(
         headers={
-            "X-Accel-Redirect": f"/_protected_hls/{video.storage_path}/master.m3u8",
-            "Content-Type": "application/vnd.apple.mpegurl",
+            "X-Accel-Redirect": f"/_protected_hls/{video.storage_path}/{file_path}",
+            "Content-Type": content_type,
         }
     )
 

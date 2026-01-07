@@ -7,3 +7,4 @@ __pycache__/
 .DS_Store
 base_users_creator.py
 storage/
+*.log
