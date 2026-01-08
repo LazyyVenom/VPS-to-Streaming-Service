@@ -63,34 +63,38 @@ class DownloadedVideoProcessor:
             variant_dir = os.path.join(output_dir, variant)
             os.makedirs(variant_dir, exist_ok=True)
 
-            (
-                ffmpeg
-                .input(input_path)
-                .output(
-                    os.path.join(variant_dir, "index.m3u8"),
-                    format="hls",
-                    hls_time=6,
-                    hls_playlist_type="vod",
-                    hls_segment_filename=os.path.join(
-                        variant_dir, "seg_%03d.ts"
-                    ),
+            stream = ffmpeg.input(input_path)
 
-                    map=["0:v:0", "0:a:0?"],
+            stream = ffmpeg.output(
+                stream,
+                os.path.join(variant_dir, "index.m3u8"),
+                format="hls",
+                hls_time=6,
+                hls_playlist_type="vod",
+                hls_segment_filename=os.path.join(
+                    variant_dir, "seg_%03d.ts"
+                ),
 
-                    vcodec="libx264",
-                    vf=f"scale={w}:{h}",
-                    video_bitrate=bitrate,
-                    maxrate=bitrate,
-                    bufsize=bitrate * 2,
+                vcodec="libx264",
+                vf=f"scale={w}:{h}",
+                video_bitrate=bitrate,
+                maxrate=bitrate,
+                bufsize=bitrate * 2,
 
-                    acodec="aac",
-                    audio_bitrate="128k",
-                    ar=44100,
-                    ac=2,
-                )
-                .overwrite_output()
-                .run(quiet=True)
+                acodec="aac",
+                audio_bitrate="128k",
+                ar=44100,
+                ac=2,
+
+                **{
+                    "map": "0:v:0",
+                    "map:a": "0:a:0?",
+                }
             )
+
+            stream = ffmpeg.overwrite_output(stream)
+            ffmpeg.run(stream, quiet=True)
+
 
     def generate_adaptive_master_streamer(self, output_dir, variants):
         lines = ["#EXTM3U"]
