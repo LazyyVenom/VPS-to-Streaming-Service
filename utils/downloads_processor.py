@@ -35,10 +35,20 @@ class DownloadedVideoProcessor:
         return videos
 
     def probe_video(self, input_path):
-        probe = ffmpeg.probe(input_path)
+        try:
+            probe = ffmpeg.probe(input_path)
+        except ffmpeg.Error as e:
+            print(f"\nFFprobe stderr output:")
+            print(e.stderr.decode() if e.stderr else "No stderr output")
+            raise Exception(f"Failed to probe video '{input_path}': {str(e)}")
+        
         video_stream = next(
-            s for s in probe["streams"] if s["codec_type"] == "video"
+            (s for s in probe["streams"] if s["codec_type"] == "video"),
+            None
         )
+        
+        if not video_stream:
+            raise Exception(f"No video stream found in '{input_path}'")
 
         return {
             "width": int(video_stream["width"]),

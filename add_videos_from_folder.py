@@ -97,6 +97,11 @@ def _process_single_video(db, processor, video_path, owner_id, folder_name):
     video_title = os.path.splitext(video_filename)[0]
     
     print(f"\n   Processing: {video_filename}")
+    print(f"   - Video path: {video_path}")
+    
+    # Verify file exists
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
     
     # Create unique storage path for this video
     video_id = str(uuid.uuid4())
@@ -105,7 +110,11 @@ def _process_single_video(db, processor, video_path, owner_id, folder_name):
     
     # Process the video (generate HLS, thumbnail, etc.)
     print("   - Generating HLS streams...")
-    metadata = processor.process_video(video_path, output_dir)
+    try:
+        metadata = processor.process_video(video_path, output_dir)
+    except Exception as e:
+        print(f"   ❌ Failed to process video: {str(e)}")
+        raise
     
     # Create video record
     video = Video(
@@ -154,6 +163,12 @@ def _process_playlist(db, processor, video_paths, owner_id, folder_name):
         video_title = os.path.splitext(video_filename)[0]
         
         print(f"\n   [{position}/{len(video_paths)}] Processing: {video_filename}")
+        print(f"       - Video path: {video_path}")
+        
+        # Verify file exists
+        if not os.path.isfile(video_path):
+            print(f"       ❌ Video file not found, skipping...")
+            continue
         
         # Create unique storage path for this video
         video_id = str(uuid.uuid4())
@@ -162,7 +177,11 @@ def _process_playlist(db, processor, video_paths, owner_id, folder_name):
         
         # Process the video
         print("       - Generating HLS streams...")
-        metadata = processor.process_video(video_path, output_dir)
+        try:
+            metadata = processor.process_video(video_path, output_dir)
+        except Exception as e:
+            print(f"       ❌ Failed to process video: {str(e)}")
+            continue
         
         # Create video record
         video = Video(
