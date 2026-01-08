@@ -135,6 +135,8 @@ def delete_video(
     """
     Delete a video, its HLS data, and all playlist associations. Only the owner can delete.
     """
+    if "guest" in current_user.username.lower():
+        return Response({"body":"Sorry Can't Allow That What will other watch"}, status_code=400)
     video = db.query(Video).filter(Video.id == video_id).first()
     
     if not video:
