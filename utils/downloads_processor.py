@@ -66,7 +66,6 @@ class DownloadedVideoProcessor:
             (
                 ffmpeg
                 .input(input_path)
-                .filter("scale", w, h)
                 .output(
                     os.path.join(variant_dir, "index.m3u8"),
                     format="hls",
@@ -75,11 +74,20 @@ class DownloadedVideoProcessor:
                     hls_segment_filename=os.path.join(
                         variant_dir, "seg_%03d.ts"
                     ),
+
+                    map="0:v:0",
+                    map="0:a:0?",
+
                     vcodec="libx264",
-                    acodec="aac",
+                    vf=f"scale={w}:{h}",
                     video_bitrate=bitrate,
                     maxrate=bitrate,
                     bufsize=bitrate * 2,
+
+                    acodec="aac",
+                    audio_bitrate="128k",
+                    ar=44100,
+                    ac=2,
                 )
                 .overwrite_output()
                 .run(quiet=True)
