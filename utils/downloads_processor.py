@@ -75,8 +75,7 @@ class DownloadedVideoProcessor:
                         variant_dir, "seg_%03d.ts"
                     ),
 
-                    map="0:v:0",
-                    map="0:a:0?",
+                    map=["0:v:0", "0:a:0?"],
 
                     vcodec="libx264",
                     vf=f"scale={w}:{h}",
