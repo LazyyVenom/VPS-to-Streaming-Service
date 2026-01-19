@@ -178,13 +178,16 @@ def add_video_to_playlist(
     
     # Auto-calculate position if not provided
     if payload.position is None:
-        # Get the maximum position value and add 1
-        result = db.query(func.max(PlaylistVideoMapping.position)).filter(
+        # Get all existing positions for this playlist and find the max
+        existing_mappings = db.query(PlaylistVideoMapping.position).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
-        ).first()
+        ).all()
         
-        max_pos = result[0] if result and result[0] is not None else None
-        position = (max_pos + 1) if max_pos is not None else 0
+        if existing_mappings:
+            max_pos = max(mapping[0] for mapping in existing_mappings)
+            position = max_pos + 1
+        else:
+            position = 0
     else:
         position = payload.position
     
