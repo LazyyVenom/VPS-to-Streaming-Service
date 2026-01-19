@@ -177,23 +177,32 @@ def add_video_to_playlist(
     
     # Auto-calculate position if not provided
     if payload.position is None:
-        max_position = db.query(PlaylistVideoMapping).filter(
+        # Get the maximum position value and add 1
+        from sqlalchemy import func
+        max_pos = db.query(func.max(PlaylistVideoMapping.position)).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
-        ).count()
-        position = max_position
+        ).scalar()
+        position = (max_pos + 1) if max_pos is not None else 0
     else:
         position = payload.position
     
     # Create the mapping
-    new_mapping = PlaylistVideoMapping(
-        playlist_id=playlist_id,
-        video_id=payload.video_id,
-        position=position
-    )
-    
-    db.add(new_mapping)
-    db.commit()
-    db.refresh(new_mapping)
+    try:
+        new_mapping = PlaylistVideoMapping(
+            playlist_id=playlist_id,
+            video_id=payload.video_id,
+            position=position
+        )
+        
+        db.add(new_mapping)
+        db.commit()
+        db.refresh(new_mapping)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add video to playlist: {str(e)}"
+        )
     
     return new_mapping
 
