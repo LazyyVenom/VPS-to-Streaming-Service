@@ -179,7 +179,7 @@ def add_video_to_playlist(
     max_position = db.query(func.max(PlaylistVideoMapping.position)).filter(
         PlaylistVideoMapping.playlist_id == playlist_id
     ).scalar()
-    position = (max_position or -1) + 1
+    position = int(max_position or 0) + 1
     
     # Create the mapping
     new_mapping = PlaylistVideoMapping(
