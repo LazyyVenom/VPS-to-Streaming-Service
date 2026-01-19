@@ -190,6 +190,18 @@ def add_video_to_playlist(
             # No videos in playlist, start at 0
             position = 0
     else:
+        # Check if the specified position is already taken
+        existing_position = db.query(PlaylistVideoMapping).filter(
+            PlaylistVideoMapping.playlist_id == playlist_id,
+            PlaylistVideoMapping.position == payload.position
+        ).first()
+        
+        if existing_position:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Position {payload.position} is already occupied in this playlist"
+            )
+        
         position = payload.position
     
     # Create the mapping
