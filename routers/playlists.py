@@ -164,7 +164,7 @@ def add_video_to_playlist(
             detail="You can only add your own videos to playlists"
         )
     
-    # Check if video is already in playlist
+    # Check if video is already in the playlist
     existing_mapping = db.query(PlaylistVideoMapping).filter(
         PlaylistVideoMapping.playlist_id == playlist_id,
         PlaylistVideoMapping.video_id == payload.video_id
@@ -176,47 +176,26 @@ def add_video_to_playlist(
             detail="Video is already in this playlist"
         )
     
-    # Auto-calculate position if not provided
-    if payload.position is None:
-        # Use func.max to efficiently get the highest position
+    # Determine the position
+    if payload.position is not None:
+        position = payload.position
+    else:
+        # Get the maximum position and add 1
         max_position = db.query(func.max(PlaylistVideoMapping.position)).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
         ).scalar()
-        
-        # If there are videos, get the highest position and add 1, otherwise start at 0
-        position = (max_position + 1) if max_position is not None else 0
-    else:
-        # Check if the specified position is already taken
-        existing_position = db.query(PlaylistVideoMapping).filter(
-            PlaylistVideoMapping.playlist_id == playlist_id,
-            PlaylistVideoMapping.position == payload.position
-        ).first()
-        
-        if existing_position:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Position {payload.position} is already occupied in this playlist"
-            )
-        
-        position = payload.position
+        position = (max_position or 0) + 1
     
     # Create the mapping
-    try:
-        new_mapping = PlaylistVideoMapping(
-            playlist_id=playlist_id,
-            video_id=payload.video_id,
-            position=position
-        )
-        
-        db.add(new_mapping)
-        db.commit()
-        db.refresh(new_mapping)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add video to playlist: {str(e)}"
-        )
+    new_mapping = PlaylistVideoMapping(
+        playlist_id=playlist_id,
+        video_id=payload.video_id,
+        position=position
+    )
+    
+    db.add(new_mapping)
+    db.commit()
+    db.refresh(new_mapping)
     
     return new_mapping
 
