@@ -204,9 +204,16 @@ def add_video_to_playlist(
         position=position
     )
     
-    db.add(new_mapping)
-    db.commit()
-    db.refresh(new_mapping)
+    try:
+        db.add(new_mapping)
+        db.commit()
+        db.refresh(new_mapping)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add video to playlist: {str(e)}"
+        )
     
     return new_mapping
 
