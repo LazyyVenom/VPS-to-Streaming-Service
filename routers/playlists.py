@@ -176,17 +176,18 @@ def add_video_to_playlist(
             detail="Video is already in this playlist"
         )
     
-    # Auto-calculate position if not provided
+    # Auto-calculate position if not provided - fetch ALL videos in the playlist
     if payload.position is None:
-        # Get all existing positions for this playlist and find the max
-        existing_mappings = db.query(PlaylistVideoMapping.position).filter(
+        # Get all videos currently in this playlist
+        all_playlist_videos = db.query(PlaylistVideoMapping).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
-        ).all()
+        ).order_by(PlaylistVideoMapping.position.desc()).all()
         
-        if existing_mappings:
-            max_pos = max(mapping[0] for mapping in existing_mappings)
-            position = max_pos + 1
+        # If there are videos, get the highest position and add 1
+        if all_playlist_videos:
+            position = all_playlist_videos[0].position + 1
         else:
+            # No videos in playlist, start at 0
             position = 0
     else:
         position = payload.position
