@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from db import get_db
 from models.users import User
 from models.videos import Playlist, PlaylistVideoMapping, Video
@@ -178,10 +179,11 @@ def add_video_to_playlist(
     # Auto-calculate position if not provided
     if payload.position is None:
         # Get the maximum position value and add 1
-        from sqlalchemy import func
-        max_pos = db.query(func.max(PlaylistVideoMapping.position)).filter(
+        result = db.query(func.max(PlaylistVideoMapping.position)).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
-        ).scalar()
+        ).first()
+        
+        max_pos = result[0] if result and result[0] is not None else None
         position = (max_pos + 1) if max_pos is not None else 0
     else:
         position = payload.position
