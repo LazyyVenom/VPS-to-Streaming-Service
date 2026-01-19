@@ -176,19 +176,15 @@ def add_video_to_playlist(
             detail="Video is already in this playlist"
         )
     
-    # Auto-calculate position if not provided - fetch ALL videos in the playlist
+    # Auto-calculate position if not provided
     if payload.position is None:
-        # Get all videos currently in this playlist
-        all_playlist_videos = db.query(PlaylistVideoMapping).filter(
+        # Use func.max to efficiently get the highest position
+        max_position = db.query(func.max(PlaylistVideoMapping.position)).filter(
             PlaylistVideoMapping.playlist_id == playlist_id
-        ).order_by(PlaylistVideoMapping.position.desc()).all()
+        ).scalar()
         
-        # If there are videos, get the highest position and add 1
-        if all_playlist_videos:
-            position = all_playlist_videos[0].position + 1
-        else:
-            # No videos in playlist, start at 0
-            position = 0
+        # If there are videos, get the highest position and add 1, otherwise start at 0
+        position = (max_position + 1) if max_position is not None else 0
     else:
         # Check if the specified position is already taken
         existing_position = db.query(PlaylistVideoMapping).filter(
