@@ -176,26 +176,10 @@ def add_video_to_playlist(
             detail="Video is already in this playlist"
         )
     
-    # Determine the position
-    if payload.position is not None:
-        position = payload.position
-        # Check if this position is already taken
-        position_exists = db.query(PlaylistVideoMapping).filter(
-            PlaylistVideoMapping.playlist_id == playlist_id,
-            PlaylistVideoMapping.position == position
-        ).first()
-        
-        if position_exists:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Position {position} is already occupied in this playlist"
-            )
-    else:
-        # Get the maximum position and add 1
-        max_position = db.query(func.max(PlaylistVideoMapping.position)).filter(
-            PlaylistVideoMapping.playlist_id == playlist_id
-        ).scalar()
-        position = (max_position or -1) + 1
+    max_position = db.query(func.max(PlaylistVideoMapping.position)).filter(
+        PlaylistVideoMapping.playlist_id == playlist_id
+    ).scalar()
+    position = (max_position or -1) + 1
     
     # Create the mapping
     new_mapping = PlaylistVideoMapping(
