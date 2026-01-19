@@ -68,9 +68,8 @@ class PlaylistWithVideosResponse(BaseModel):
 
 
 class PlaylistVideoMappingCreate(BaseModel):
-    playlist_id: str
     video_id: str
-    position: int
+    position: Optional[int] = None
 
 
 class PlaylistVideoMappingResponse(BaseModel):
