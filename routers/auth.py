@@ -8,6 +8,8 @@ from utils.auth import create_access_token, create_refresh_token, get_current_us
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
+from jose import jwt, JWTError
+from config import setting
 
 route = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth2bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
@@ -17,28 +19,31 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user
     """
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.username == payload.username).first()
-    if existing_user:
-        raise HTTPException(
+    raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
+            detail="Not Allowed"
         )
+    # existing_user = db.query(User).filter(User.username == payload.username).first()
+    # if existing_user:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Username already exists"
+    #     )
     
-    # Create new user
-    hashed_password = secure_pwd(payload.password)
-    new_user = User(
-        username=payload.username,
-        password_hash=hashed_password,
-        daily_bandwidth_limit=payload.daily_bandwidth_limit,
-        monthly_bandwidth_limit=payload.monthly_bandwidth_limit
-    )
+    # # Create new user
+    # hashed_password = secure_pwd(payload.password)
+    # new_user = User(
+    #     username=payload.username,
+    #     password_hash=hashed_password,
+    #     daily_bandwidth_limit=payload.daily_bandwidth_limit,
+    #     monthly_bandwidth_limit=payload.monthly_bandwidth_limit
+    # )
     
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    # db.add(new_user)
+    # db.commit()
+    # db.refresh(new_user)
     
-    return new_user
+    # return new_user
 
 
 @route.post("/login")
@@ -75,6 +80,48 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
         'access_token': access_token,
         'token_type': 'bearer',
         'refresh_token': refresh_token,
+    }
+
+
+@route.post("/refresh")
+def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+    """
+    Refresh access token using a valid refresh token
+    """
+    try:
+        payload = jwt.decode(
+            refresh_token, 
+            setting.refresh_secret_key, 
+            algorithms=[setting.algorithm]
+        )
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+    
+    # Verify user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Create new tokens
+    new_access_token = create_access_token(subject=user.id)
+    new_refresh_token = create_refresh_token(subject=user.id)
+    
+    return {
+        'access_token': new_access_token,
+        'token_type': 'bearer',
+        'refresh_token': new_refresh_token,
     }
 
 
